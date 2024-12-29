@@ -1,3 +1,4 @@
+
 from kivymd.app import MDApp
 from kivy.lang import Builder
 from kivymd.uix.boxlayout import BoxLayout
@@ -8,10 +9,10 @@ from kivy.config import Config
 from kivy.metrics import dp
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.card import MDCard
-from kivy.graphics import Rectangle, Color
 
-Config.set('graphics', 'width', '360')
-Config.set('graphics', 'height', '640')
+# Set screen size to a range suitable for 4.7" to 9.7" devices
+Config.set('graphics', 'width', '375')
+Config.set('graphics', 'height', '812')
 Config.set('graphics', 'resizable', 0)
 
 KV = """
@@ -43,40 +44,29 @@ Screen:
                 spacing: dp(5)
 """
 
-
 class SubjectInfoDialog(MDDialog):
     def __init__(self, subject, subject_data, **kwargs):
         self.subject = subject
         self.subject_data = subject_data
 
-        # Main container layout for the dialog content
         main_layout = BoxLayout(
             orientation="vertical",
             padding=dp(20),
             spacing=dp(10),
         )
 
-        # Add a canvas background to the main layout
-        with main_layout.canvas.before:
-            Color(rgba=(1, 1, 1, 1))  # White background
-            self.rect = Rectangle(size=main_layout.size, pos=main_layout.pos)
-            main_layout.bind(size=self.update_rect, pos=self.update_rect)
-
-        # Input fields for subject information
         self.units_input = MDTextField(hint_text="Enter Units", mode="rectangle", input_filter="int")
         self.meetings_input = MDTextField(hint_text="Enter Number of Meetings", mode="rectangle", input_filter="int")
         self.instructor_input = MDTextField(hint_text="Enter Instructor's Name", mode="rectangle")
         self.room_input = MDTextField(hint_text="Enter Room Number", mode="rectangle")
         self.course_code_input = MDTextField(hint_text="Enter Course Code", mode="rectangle")
 
-        # Add input fields to the main layout
         main_layout.add_widget(self.units_input)
         main_layout.add_widget(self.meetings_input)
         main_layout.add_widget(self.instructor_input)
         main_layout.add_widget(self.room_input)
         main_layout.add_widget(self.course_code_input)
 
-        # Save and Cancel buttons
         buttons_layout = BoxLayout(
             orientation="horizontal",
             size_hint_y=None,
@@ -87,18 +77,15 @@ class SubjectInfoDialog(MDDialog):
         save_button = MDRectangleFlatButton(text="SAVE", on_release=self.save_subject_info)
         buttons_layout.add_widget(cancel_button)
         buttons_layout.add_widget(save_button)
-
         main_layout.add_widget(buttons_layout)
 
-        # Initialize the dialog with title and content
         super().__init__(
             title=f"Edit Subject: {self.subject}",
             type="custom",
-            content_cls=main_layout,  # Use the main layout as the content
+            content_cls=main_layout,
             **kwargs,
         )
 
-        # Populate existing data if available
         if self.subject_data:
             self.units_input.text = str(self.subject_data.get("units", ""))
             self.meetings_input.text = str(self.subject_data.get("meetings", ""))
@@ -106,13 +93,7 @@ class SubjectInfoDialog(MDDialog):
             self.room_input.text = self.subject_data.get("room", "")
             self.course_code_input.text = self.subject_data.get("course_code", "")
 
-    def update_rect(self, instance, value):
-        """Update the background rectangle to match the layout's size and position."""
-        self.rect.size = instance.size
-        self.rect.pos = instance.pos
-
     def save_subject_info(self, *args):
-        """Save the entered subject information and dismiss the dialog."""
         units = self.units_input.text
         meetings = self.meetings_input.text
         instructor = self.instructor_input.text
@@ -129,13 +110,13 @@ class SubjectInfoDialog(MDDialog):
         except ValueError:
             print("Please enter valid numbers for units and meetings.")
 
-
 class MainApp(MDApp):
     def build(self):
         return Builder.load_string(KV)
 
     def on_start(self):
         self.root.subjects = {}
+        self.root.add_subject_info = self.add_subject_info
 
     def show_subject_info_dialog(self, subject):
         subject_data = self.root.subjects.get(subject, {})
@@ -176,8 +157,6 @@ class MainApp(MDApp):
         self.root.subjects[subject]["instructor"] = instructor
         self.root.subjects[subject]["room"] = room
         self.root.subjects[subject]["course_code"] = course_code
-        print(self.root.subjects)
-
 
 if __name__ == "__main__":
     MainApp().run()
