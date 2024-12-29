@@ -1,100 +1,174 @@
-from kivy.lang import Builder
 from kivymd.app import MDApp
-from kivymd.uix.card import MDCard
-from kivy.metrics import dp
-from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDRaisedButton
-from kivymd.uix.dialog import MDDialog
+from kivy.lang import Builder
+from kivymd.uix.boxlayout import BoxLayout
 from kivymd.uix.textfield import MDTextField
-from kivy.uix.boxlayout import BoxLayout
-from kivy.core.window import Window
+from kivymd.uix.label import MDLabel
+from kivymd.uix.button import MDRectangleFlatButton, MDFloatingActionButton, MDIconButton
+from kivy.config import Config
+from kivy.metrics import dp
+from kivymd.uix.dialog import MDDialog
+from kivymd.uix.card import MDCard
+from kivy.graphics import Rectangle, Color
 
-KV = '''
-BoxLayout:
-    orientation: 'vertical'
-    MDTextField:
-        id: subject_input
-        hint_text: "Enter subject"
-    MDRaisedButton:
-        text: "Add Subject"
-        on_release: app.add_subject()
-    ScrollView:
-        MDBoxLayout:
-            id: subject_stack
-            orientation: 'vertical'
-            size_hint_y: None
-            height: self.minimum_height
-'''
+Config.set('graphics', 'width', '360')
+Config.set('graphics', 'height', '640')
+Config.set('graphics', 'resizable', 0)
 
-class SubjectInfoDialog(BoxLayout):
-    def __init__(self, subject, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'vertical'
+KV = """
+Screen:
+    auto_keyboard: True
+
+    BoxLayout:
+        orientation: 'vertical'
+        padding: dp(20)
+        spacing: dp(10)
+        pos_hint: {'top': 1}
+
+        MDTextField:
+            id: subject_input
+            hint_text: "Enter Subject Name"
+            mode: "rectangle"
+            multiline: False
+
+        MDFloatingActionButton:
+            icon: "plus"
+            md_bg_color: "green"
+            pos_hint: {'x': 0.85, 'y': 0.1}
+            on_release: app.add_subject()
+
+        ScrollView:
+            MDList:
+                id: subject_stack
+                padding: dp(10)
+                spacing: dp(5)
+"""
+
+
+class SubjectInfoDialog(MDDialog):
+    def __init__(self, subject, subject_data, **kwargs):
         self.subject = subject
-        self.add_widget(MDTextField(hint_text="Units", id="units_input"))
-        self.add_widget(MDTextField(hint_text="Meetings", id="meetings_input"))
-        self.add_widget(MDTextField(hint_text="Instructor", id="instructor_input"))
-        self.add_widget(MDTextField(hint_text="Room", id="room_input"))
-        self.add_widget(MDTextField(hint_text="Course Code", id="course_code_input"))
-        self.add_widget(MDRaisedButton(text="Save", on_release=self.save_subject_info))
+        self.subject_data = subject_data
+
+        # Main container layout for the dialog content
+        main_layout = BoxLayout(
+            orientation="vertical",
+            padding=dp(20),
+            spacing=dp(10),
+        )
+
+        # Add a canvas background to the main layout
+        with main_layout.canvas.before:
+            Color(rgba=(1, 1, 1, 1))  # White background
+            self.rect = Rectangle(size=main_layout.size, pos=main_layout.pos)
+            main_layout.bind(size=self.update_rect, pos=self.update_rect)
+
+        # Input fields for subject information
+        self.units_input = MDTextField(hint_text="Enter Units", mode="rectangle", input_filter="int")
+        self.meetings_input = MDTextField(hint_text="Enter Number of Meetings", mode="rectangle", input_filter="int")
+        self.instructor_input = MDTextField(hint_text="Enter Instructor's Name", mode="rectangle")
+        self.room_input = MDTextField(hint_text="Enter Room Number", mode="rectangle")
+        self.course_code_input = MDTextField(hint_text="Enter Course Code", mode="rectangle")
+
+        # Add input fields to the main layout
+        main_layout.add_widget(self.units_input)
+        main_layout.add_widget(self.meetings_input)
+        main_layout.add_widget(self.instructor_input)
+        main_layout.add_widget(self.room_input)
+        main_layout.add_widget(self.course_code_input)
+
+        # Save and Cancel buttons
+        buttons_layout = BoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(40),
+            spacing=dp(10),
+        )
+        cancel_button = MDRectangleFlatButton(text="CANCEL", on_release=self.dismiss)
+        save_button = MDRectangleFlatButton(text="SAVE", on_release=self.save_subject_info)
+        buttons_layout.add_widget(cancel_button)
+        buttons_layout.add_widget(save_button)
+
+        main_layout.add_widget(buttons_layout)
+
+        # Initialize the dialog with title and content
+        super().__init__(
+            title=f"Edit Subject: {self.subject}",
+            type="custom",
+            content_cls=main_layout,  # Use the main layout as the content
+            **kwargs,
+        )
+
+        # Populate existing data if available
+        if self.subject_data:
+            self.units_input.text = str(self.subject_data.get("units", ""))
+            self.meetings_input.text = str(self.subject_data.get("meetings", ""))
+            self.instructor_input.text = self.subject_data.get("instructor", "")
+            self.room_input.text = self.subject_data.get("room", "")
+            self.course_code_input.text = self.subject_data.get("course_code", "")
+
+    def update_rect(self, instance, value):
+        """Update the background rectangle to match the layout's size and position."""
+        self.rect.size = instance.size
+        self.rect.pos = instance.pos
 
     def save_subject_info(self, *args):
-        units = self.ids.units_input.text
-        meetings = self.ids.meetings_input.text
-        instructor = self.ids.instructor_input.text
-        room = self.ids.room_input.text
-        course_code = self.ids.course_code_input.text
+        """Save the entered subject information and dismiss the dialog."""
+        units = self.units_input.text
+        meetings = self.meetings_input.text
+        instructor = self.instructor_input.text
+        room = self.room_input.text
+        course_code = self.course_code_input.text
 
         try:
             units = int(units)
             meetings = int(meetings)
-            app = MDApp.get_running_app()
-            app.add_subject_info(self.subject, units, meetings, instructor, room, course_code)
-            self.parent.parent.dismiss()
+            MainApp.get_running_app().root.add_subject_info(
+                self.subject, units, meetings, instructor, room, course_code
+            )
+            self.dismiss()
         except ValueError:
             print("Please enter valid numbers for units and meetings.")
 
+
 class MainApp(MDApp):
     def build(self):
-        print("Building the application...")
         return Builder.load_string(KV)
 
     def on_start(self):
-        print("Application started.")
         self.root.subjects = {}
+
+    def show_subject_info_dialog(self, subject):
+        subject_data = self.root.subjects.get(subject, {})
+        dialog = SubjectInfoDialog(subject=subject, subject_data=subject_data)
+        dialog.open()
 
     def add_subject(self):
         subject = self.root.ids.subject_input.text
         if subject:
             if subject not in self.root.subjects:
-                self.root.subjects[subject] = {} # Initialize empty dictionary
+                self.root.subjects[subject] = {}
                 card = MDCard(
                     orientation='horizontal',
                     padding=dp(10),
                     spacing=dp(5),
                     size_hint_y=None,
                     height=dp(60),
+                    md_bg_color=(0, 1, 0, 0.5)
                 )
-                label = MDLabel(text=subject)
-                info_button = MDRaisedButton(text="i", on_release=lambda x: self.show_subject_info_dialog(subject))
+                label = MDLabel(text=subject, halign="left", size_hint_x=0.8)
+                info_button = MDIconButton(
+                    icon="information-outline",
+                    size_hint_x=0.2,
+                    on_release=lambda instance, subject=subject: self.show_subject_info_dialog(subject)
+                )
                 card.add_widget(label)
                 card.add_widget(info_button)
                 self.root.ids.subject_stack.add_widget(card)
                 self.root.ids.subject_input.text = ""
-                self.root.ids.subject_stack.height = len(self.root.ids.subject_stack.children) * dp(70)
             else:
                 print("Subject already exists.")
         else:
             print("Please enter a subject.")
-
-    def show_subject_info_dialog(self, subject):
-        dialog_content = SubjectInfoDialog(subject=subject)
-        self.dialog = MDDialog(
-            title="Enter Subject Info",
-            type="custom",
-            content_cls=dialog_content,
-        )
-        self.dialog.open()
 
     def add_subject_info(self, subject, units, meetings, instructor, room, course_code):
         self.root.subjects[subject]["units"] = units
@@ -104,6 +178,6 @@ class MainApp(MDApp):
         self.root.subjects[subject]["course_code"] = course_code
         print(self.root.subjects)
 
+
 if __name__ == "__main__":
-    print("Starting the application...")
     MainApp().run()
