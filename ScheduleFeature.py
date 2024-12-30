@@ -82,24 +82,25 @@ Screen:
         height: dp(56)
 
         MDBottomNavigationItem:
+            name: "screen_schedules"
+            icon: "calendar"
+            text: "My Classes"
+        
+        MDBottomNavigationItem:
+            name: "screen_todo"
+            icon: "check-circle"
+            text: "To-Do's"
+            
+        MDBottomNavigationItem:
             name: "screen_home"
             icon: "home"
             text: "Home"
-
-        MDBottomNavigationItem:
-            name: "screen_schedules"
-            icon: "calendar"
-            text: "Schedules"
-
+                    
         MDBottomNavigationItem:
             name: "screen_contacts"
             icon: "contacts"
             text: "Contacts"
 
-        MDBottomNavigationItem:
-            name: "screen_todo"
-            icon: "check-circle"
-            text: "To-Do's"
 """
 
 
